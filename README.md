@@ -1,6 +1,6 @@
 # The Rust Programming Language
 
-** This is a fork of the rust compiler, just instrumented for coverage to get coverage information when fuzzing **
+**This is a fork of the rust compiler, just instrumented for coverage to get coverage information when fuzzing**
 
 This is the main source code repository for [Rust]. It contains the compiler,
 standard library, and documentation.
