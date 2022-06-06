@@ -22,6 +22,10 @@ Session.vim
 .favorites.json
 .settings/
 
+## Coverage Information
+coverage
+*.profraw
+
 ## Tool
 .valgrindrc
 .cargo
