@@ -1363,7 +1363,7 @@ impl<'a> Builder<'a> {
         }
 
         // Add coverage to rust compiler for everything but the standard library
-        if mode != Mode::Std {
+        if mode != Mode::Std && stage != 0 {
             rustflags.arg("-Cinstrument-coverage");
             rustflags.arg("-Zprofile");
         }
