@@ -23,18 +23,16 @@ use rustc_middle::infer::unify_key::{ConstVariableOrigin, ConstVariableOriginKin
 use rustc_middle::mir::interpret::{ErrorHandled, EvalToConstValueResult};
 use rustc_middle::traits::select;
 use rustc_middle::ty::error::{ExpectedFound, TypeError};
-use rustc_middle::ty::fold::{TypeFoldable, TypeFolder};
+use rustc_middle::ty::fold::{TypeFoldable, TypeFolder, TypeSuperFoldable};
 use rustc_middle::ty::relate::RelateResult;
 use rustc_middle::ty::subst::{GenericArg, GenericArgKind, InternalSubsts, SubstsRef};
 pub use rustc_middle::ty::IntVarValue;
 use rustc_middle::ty::{self, GenericParamDefKind, InferConst, Ty, TyCtxt};
 use rustc_middle::ty::{ConstVid, FloatVid, IntVid, TyVid};
-use rustc_session::config::BorrowckMode;
 use rustc_span::symbol::Symbol;
 use rustc_span::Span;
 
 use std::cell::{Cell, Ref, RefCell};
-use std::collections::BTreeMap;
 use std::fmt;
 
 use self::combine::CombineFields;
@@ -97,29 +95,7 @@ pub enum RegionckMode {
     #[default]
     Solve,
     /// Erase the results of region after solving.
-    Erase {
-        /// A flag that is used to suppress region errors, when we are doing
-        /// region checks that the NLL borrow checker will also do -- it might
-        /// be set to true.
-        suppress_errors: bool,
-    },
-}
-
-impl RegionckMode {
-    /// Indicates that the MIR borrowck will repeat these region
-    /// checks, so we should ignore errors if NLL is (unconditionally)
-    /// enabled.
-    pub fn for_item_body(tcx: TyCtxt<'_>) -> Self {
-        // FIXME(Centril): Once we actually remove `::Migrate` also make
-        // this always `true` and then proceed to eliminate the dead code.
-        match tcx.borrowck_mode() {
-            // If we're on Migrate mode, report AST region errors
-            BorrowckMode::Migrate => RegionckMode::Erase { suppress_errors: false },
-
-            // If we're on MIR, don't report AST region errors as they should be reported by NLL
-            BorrowckMode::Mir => RegionckMode::Erase { suppress_errors: true },
-        }
-    }
+    Erase,
 }
 
 /// This type contains all the things within `InferCtxt` that sit within a
@@ -1547,25 +1523,40 @@ impl<'a, 'tcx> InferCtxt<'a, 'tcx> {
         span: Span,
         lbrct: LateBoundRegionConversionTime,
         value: ty::Binder<'tcx, T>,
-    ) -> (T, BTreeMap<ty::BoundRegion, ty::Region<'tcx>>)
+    ) -> T
     where
-        T: TypeFoldable<'tcx>,
+        T: TypeFoldable<'tcx> + Copy,
     {
-        let fld_r =
-            |br: ty::BoundRegion| self.next_region_var(LateBoundRegion(span, br.kind, lbrct));
-        let fld_t = |_| {
-            self.next_ty_var(TypeVariableOrigin {
-                kind: TypeVariableOriginKind::MiscVariable,
-                span,
+        if let Some(inner) = value.no_bound_vars() {
+            return inner;
+        }
+
+        let mut region_map = FxHashMap::default();
+        let fld_r = |br: ty::BoundRegion| {
+            *region_map
+                .entry(br)
+                .or_insert_with(|| self.next_region_var(LateBoundRegion(span, br.kind, lbrct)))
+        };
+
+        let mut ty_map = FxHashMap::default();
+        let fld_t = |bt: ty::BoundTy| {
+            *ty_map.entry(bt).or_insert_with(|| {
+                self.next_ty_var(TypeVariableOrigin {
+                    kind: TypeVariableOriginKind::MiscVariable,
+                    span,
+                })
             })
         };
-        let fld_c = |_, ty| {
-            self.next_const_var(
-                ty,
-                ConstVariableOrigin { kind: ConstVariableOriginKind::MiscVariable, span },
-            )
+        let mut ct_map = FxHashMap::default();
+        let fld_c = |bc: ty::BoundVar, ty| {
+            *ct_map.entry(bc).or_insert_with(|| {
+                self.next_const_var(
+                    ty,
+                    ConstVariableOrigin { kind: ConstVariableOriginKind::MiscVariable, span },
+                )
+            })
         };
-        self.tcx.replace_bound_vars(value, fld_r, fld_t, fld_c)
+        self.tcx.replace_bound_vars_uncached(value, fld_r, fld_t, fld_c)
     }
 
     /// See the [`region_constraints::RegionConstraintCollector::verify_generic_bound`] method.

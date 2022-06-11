@@ -1278,6 +1278,22 @@ impl Expr {
             },
         )
     }
+
+    // To a first-order approximation, is this a pattern
+    pub fn is_approximately_pattern(&self) -> bool {
+        match &self.peel_parens().kind {
+            ExprKind::Box(_)
+            | ExprKind::Array(_)
+            | ExprKind::Call(_, _)
+            | ExprKind::Tup(_)
+            | ExprKind::Lit(_)
+            | ExprKind::Range(_, _, _)
+            | ExprKind::Underscore
+            | ExprKind::Path(_, _)
+            | ExprKind::Struct(_) => true,
+            _ => false,
+        }
+    }
 }
 
 /// Limit types of a range (inclusive or exclusive)
@@ -2473,9 +2489,7 @@ rustc_index::newtype_index! {
 }
 
 impl<S: Encoder> rustc_serialize::Encodable<S> for AttrId {
-    fn encode(&self, _s: &mut S) -> Result<(), S::Error> {
-        Ok(())
-    }
+    fn encode(&self, _s: &mut S) {}
 }
 
 impl<D: Decoder> rustc_serialize::Decodable<D> for AttrId {

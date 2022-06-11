@@ -6,7 +6,7 @@ use crate::hir::place::Place as HirPlace;
 use crate::infer::canonical::{Canonical, CanonicalVarInfo, CanonicalVarInfos};
 use crate::lint::{struct_lint_level, LintDiagnosticBuilder, LintLevelSource};
 use crate::middle::codegen_fn_attrs::CodegenFnAttrs;
-use crate::middle::resolve_lifetime::{self, LifetimeScopeForPath};
+use crate::middle::resolve_lifetime;
 use crate::middle::stability;
 use crate::mir::interpret::{self, Allocation, ConstAllocation, ConstValue, Scalar};
 use crate::mir::{
@@ -49,7 +49,7 @@ use rustc_macros::HashStable;
 use rustc_middle::mir::FakeReadCause;
 use rustc_query_system::ich::StableHashingContext;
 use rustc_serialize::opaque::{FileEncodeResult, FileEncoder};
-use rustc_session::config::{BorrowckMode, CrateType, OutputFilenames};
+use rustc_session::config::{CrateType, OutputFilenames};
 use rustc_session::lint::{Level, Lint};
 use rustc_session::Limit;
 use rustc_session::Session;
@@ -87,7 +87,7 @@ pub trait OnDiskCache<'tcx>: rustc_data_structures::sync::Sync {
 
     fn drop_serialized_data(&self, tcx: TyCtxt<'tcx>);
 
-    fn serialize(&self, tcx: TyCtxt<'tcx>, encoder: &mut FileEncoder) -> FileEncodeResult;
+    fn serialize(&self, tcx: TyCtxt<'tcx>, encoder: FileEncoder) -> FileEncodeResult;
 }
 
 #[allow(rustc::usage_of_ty_tykind)]
@@ -1466,46 +1466,8 @@ impl<'tcx> TyCtxt<'tcx> {
         )
     }
 
-    pub fn serialize_query_result_cache(self, encoder: &mut FileEncoder) -> FileEncodeResult {
-        self.on_disk_cache.as_ref().map_or(Ok(()), |c| c.serialize(self, encoder))
-    }
-
-    /// If `true`, we should use the MIR-based borrowck, but also
-    /// fall back on the AST borrowck if the MIR-based one errors.
-    pub fn migrate_borrowck(self) -> bool {
-        self.borrowck_mode().migrate()
-    }
-
-    /// What mode(s) of borrowck should we run? AST? MIR? both?
-    /// (Also considers the `#![feature(nll)]` setting.)
-    pub fn borrowck_mode(self) -> BorrowckMode {
-        // Here are the main constraints we need to deal with:
-        //
-        // 1. An opts.borrowck_mode of `BorrowckMode::Migrate` is
-        //    synonymous with no `-Z borrowck=...` flag at all.
-        //
-        // 2. We want to allow developers on the Nightly channel
-        //    to opt back into the "hard error" mode for NLL,
-        //    (which they can do via specifying `#![feature(nll)]`
-        //    explicitly in their crate).
-        //
-        // So, this precedence list is how pnkfelix chose to work with
-        // the above constraints:
-        //
-        // * `#![feature(nll)]` *always* means use NLL with hard
-        //   errors. (To simplify the code here, it now even overrides
-        //   a user's attempt to specify `-Z borrowck=compare`, which
-        //   we arguably do not need anymore and should remove.)
-        //
-        // * Otherwise, if no `-Z borrowck=...` then use migrate mode
-        //
-        // * Otherwise, use the behavior requested via `-Z borrowck=...`
-
-        if self.features().nll {
-            return BorrowckMode::Mir;
-        }
-
-        self.sess.opts.borrowck_mode
+    pub fn serialize_query_result_cache(self, encoder: FileEncoder) -> FileEncodeResult {
+        self.on_disk_cache.as_ref().map_or(Ok(0), |c| c.serialize(self, encoder))
     }
 
     /// If `true`, we should use lazy normalization for constants, otherwise
@@ -2819,10 +2781,6 @@ impl<'tcx> TyCtxt<'tcx> {
                 })
                 .iter(),
         )
-    }
-
-    pub fn lifetime_scope(self, id: HirId) -> Option<&'tcx LifetimeScopeForPath> {
-        self.lifetime_scope_map(id.owner).as_ref().and_then(|map| map.get(&id.local_id))
     }
 
     /// Whether the `def_id` counts as const fn in the current crate, considering all active

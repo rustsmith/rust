@@ -1813,6 +1813,20 @@ impl Expr<'_> {
             | ExprKind::Err => true,
         }
     }
+
+    // To a first-order approximation, is this a pattern
+    pub fn is_approximately_pattern(&self) -> bool {
+        match &self.kind {
+            ExprKind::Box(_)
+            | ExprKind::Array(_)
+            | ExprKind::Call(..)
+            | ExprKind::Tup(_)
+            | ExprKind::Lit(_)
+            | ExprKind::Path(_)
+            | ExprKind::Struct(..) => true,
+            _ => false,
+        }
+    }
 }
 
 /// Checks if the specified expression is a built-in range literal.
@@ -1871,7 +1885,7 @@ pub enum ExprKind<'hir> {
     /// To resolve the called method to a `DefId`, call [`type_dependent_def_id`] with
     /// the `hir_id` of the `MethodCall` node itself.
     ///
-    /// [`type_dependent_def_id`]: ../ty/struct.TypeckResults.html#method.type_dependent_def_id
+    /// [`type_dependent_def_id`]: ../../rustc_middle/ty/struct.TypeckResults.html#method.type_dependent_def_id
     MethodCall(&'hir PathSegment<'hir>, &'hir [Expr<'hir>], Span),
     /// A tuple (e.g., `(a, b, c, d)`).
     Tup(&'hir [Expr<'hir>]),
@@ -1968,7 +1982,7 @@ pub enum ExprKind<'hir> {
 ///
 /// To resolve the path to a `DefId`, call [`qpath_res`].
 ///
-/// [`qpath_res`]: ../rustc_middle/ty/struct.TypeckResults.html#method.qpath_res
+/// [`qpath_res`]: ../../rustc_middle/ty/struct.TypeckResults.html#method.qpath_res
 #[derive(Debug, HashStable_Generic)]
 pub enum QPath<'hir> {
     /// Path to a definition, optionally "fully-qualified" with a `Self`
@@ -3302,6 +3316,7 @@ pub enum Node<'hir> {
     Stmt(&'hir Stmt<'hir>),
     PathSegment(&'hir PathSegment<'hir>),
     Ty(&'hir Ty<'hir>),
+    TypeBinding(&'hir TypeBinding<'hir>),
     TraitRef(&'hir TraitRef<'hir>),
     Binding(&'hir Pat<'hir>),
     Pat(&'hir Pat<'hir>),
@@ -3347,6 +3362,7 @@ impl<'hir> Node<'hir> {
             | Node::PathSegment(PathSegment { ident, .. }) => Some(*ident),
             Node::Lifetime(lt) => Some(lt.name.ident()),
             Node::GenericParam(p) => Some(p.name.ident()),
+            Node::TypeBinding(b) => Some(b.ident),
             Node::Param(..)
             | Node::AnonConst(..)
             | Node::Expr(..)

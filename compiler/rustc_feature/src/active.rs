@@ -383,8 +383,6 @@ declare_features! (
     (active, exclusive_range_pattern, "1.11.0", Some(37854), None),
     /// Allows exhaustive pattern matching on types that contain uninhabited types.
     (active, exhaustive_patterns, "1.13.0", Some(51085), None),
-    /// Allows explicit generic arguments specification with `impl Trait` present.
-    (active, explicit_generic_args_with_impl_trait, "1.56.0", Some(83701), None),
     /// Allows defining `extern type`s.
     (active, extern_types, "1.23.0", Some(43467), None),
     /// Allows the use of `#[ffi_const]` on foreign functions.
@@ -451,8 +449,6 @@ declare_features! (
     (active, naked_functions, "1.9.0", Some(32408), None),
     /// Allows specifying the as-needed link modifier
     (active, native_link_modifiers_as_needed, "1.53.0", Some(81490), None),
-    /// Allows specifying the bundle link modifier
-    (active, native_link_modifiers_bundle, "1.53.0", Some(81490), None),
     /// Allows specifying the verbatim link modifier
     (active, native_link_modifiers_verbatim, "1.53.0", Some(81490), None),
     /// Allow negative trait implementations.
@@ -461,8 +457,6 @@ declare_features! (
     (active, never_type, "1.13.0", Some(35121), None),
     /// Allows diverging expressions to fall back to `!` rather than `()`.
     (active, never_type_fallback, "1.41.0", Some(65992), None),
-    /// Allows using non lexical lifetimes (RFC 2094).
-    (active, nll, "1.0.0", Some(43234), None),
     /// Allows `#![no_core]`.
     (active, no_core, "1.3.0", Some(29639), None),
     /// Allows function attribute `#[no_coverage]`, to bypass coverage
@@ -498,12 +492,12 @@ declare_features! (
     (incomplete, repr128, "1.16.0", Some(56071), None),
     /// Allows `repr(simd)` and importing the various simd intrinsics.
     (active, repr_simd, "1.4.0", Some(27731), None),
+    /// Allows `extern "rust-cold"`.
+    (active, rust_cold_cc, "1.63.0", Some(97544), None),
     /// Allows the use of SIMD types in functions declared in `extern` blocks.
     (active, simd_ffi, "1.0.0", Some(27731), None),
     /// Allows specialization of implementations (RFC 1210).
     (incomplete, specialization, "1.7.0", Some(31844), None),
-    /// Allows `#[link(kind="static-nobundle"...)]`.
-    (active, static_nobundle, "1.16.0", Some(37403), None),
     /// Allows attributes on expressions and non-item statements.
     (active, stmt_expr_attributes, "1.6.0", Some(15701), None),
     /// Allows lints part of the strict provenance effort.

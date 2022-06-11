@@ -178,9 +178,6 @@ top_level_options!(
 
         debugging_opts: DebuggingOptions [SUBSTRUCT],
         prints: Vec<PrintRequest> [UNTRACKED],
-        /// Determines which borrow checker(s) to run. This is the parsed, sanitized
-        /// version of `debugging_opts.borrowck`, which is just a plain string.
-        borrowck_mode: BorrowckMode [UNTRACKED],
         cg: CodegenOptions [SUBSTRUCT],
         externs: Externs [UNTRACKED],
         crate_name: Option<String> [TRACKED],
@@ -581,7 +578,7 @@ mod parse {
     pub(crate) fn parse_threads(slot: &mut usize, v: Option<&str>) -> bool {
         match v.and_then(|s| s.parse().ok()) {
             Some(0) => {
-                *slot = std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get);
+                *slot = ::num_cpus::get();
                 true
             }
             Some(i) => {
@@ -1210,8 +1207,6 @@ options! {
     binary_dep_depinfo: bool = (false, parse_bool, [TRACKED],
         "include artifacts (sysroot, crate dependencies) used during compilation in dep-info \
         (default: no)"),
-    borrowck: String = ("migrate".to_string(), parse_string, [UNTRACKED],
-        "select which borrowck is used (`mir` or `migrate`) (default: `migrate`)"),
     branch_protection: Option<BranchProtection> = (None, parse_branch_protection, [TRACKED],
         "set options for branch target identification and pointer authentication on AArch64"),
     cf_protection: CFProtection = (CFProtection::None, parse_cfprotection, [TRACKED],
@@ -1546,6 +1541,8 @@ options! {
         "choose the TLS model to use (`rustc --print tls-models` for details)"),
     trace_macros: bool = (false, parse_bool, [UNTRACKED],
         "for every macro invocation, print its name and arguments (default: no)"),
+    translate_remapped_path_to_local_path: bool = (true, parse_bool, [TRACKED],
+        "translate remapped paths into local paths when possible (default: yes)"),
     trap_unreachable: Option<bool> = (None, parse_opt_bool, [TRACKED],
         "generate trap instructions for unreachable intrinsics (default: use target setting, usually yes)"),
     treat_err_as_bug: Option<NonZeroUsize> = (None, parse_treat_err_as_bug, [TRACKED],

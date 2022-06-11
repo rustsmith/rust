@@ -15,7 +15,7 @@ use rustc_middle::ty::layout::{
 use rustc_middle::ty::{
     self, query::TyCtxtAt, subst::SubstsRef, ParamEnv, Ty, TyCtxt, TypeFoldable,
 };
-use rustc_mir_dataflow::storage::AlwaysLiveLocals;
+use rustc_mir_dataflow::storage::always_live_locals;
 use rustc_query_system::ich::StableHashingContext;
 use rustc_session::Limit;
 use rustc_span::{Pos, Span};
@@ -126,7 +126,9 @@ pub struct Frame<'mir, 'tcx, Tag: Provenance = AllocId, Extra = ()> {
     /// this frame (can happen e.g. during frame initialization, and during unwinding on
     /// frames without cleanup code).
     /// We basically abuse `Result` as `Either`.
-    pub(super) loc: Result<mir::Location, Span>,
+    ///
+    /// Needs to be public because ConstProp does unspeakable things to it.
+    pub loc: Result<mir::Location, Span>,
 }
 
 /// What we store about a frame in an interpreter backtrace.
@@ -320,6 +322,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> LayoutOfHelpers<'tcx> for InterpC
 
     #[inline]
     fn layout_tcx_at_span(&self) -> Span {
+        // Using the cheap root span for performance.
         self.tcx.span
     }
 
@@ -715,7 +718,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         // Now mark those locals as dead that we do not want to initialize
         // Mark locals that use `Storage*` annotations as dead on function entry.
-        let always_live = AlwaysLiveLocals::new(self.body());
+        let always_live = always_live_locals(self.body());
         for local in locals.indices() {
             if !always_live.contains(local) {
                 locals[local].value = LocalValue::Dead;
@@ -923,7 +926,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             self.param_env
         };
         let param_env = param_env.with_const();
-        let val = self.tcx.eval_to_allocation_raw(param_env.and(gid))?;
+        // Use a precise span for better cycle errors.
+        let val = self.tcx.at(self.cur_span()).eval_to_allocation_raw(param_env.and(gid))?;
         self.raw_const_to_mplace(val)
     }
 

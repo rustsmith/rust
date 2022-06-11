@@ -1163,6 +1163,7 @@ symbols! {
         rust_2024,
         rust_2024_preview,
         rust_begin_unwind,
+        rust_cold_cc,
         rust_eh_catch_typeinfo,
         rust_eh_personality,
         rust_eh_register_frames,
@@ -1801,8 +1802,8 @@ impl fmt::Display for Symbol {
 }
 
 impl<S: Encoder> Encodable<S> for Symbol {
-    fn encode(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_str(self.as_str())
+    fn encode(&self, s: &mut S) {
+        s.emit_str(self.as_str());
     }
 }
 

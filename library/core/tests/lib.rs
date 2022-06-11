@@ -84,7 +84,6 @@
 #![feature(const_option)]
 #![feature(const_option_ext)]
 #![feature(const_result)]
-#![feature(const_intrinsic_copy)]
 #![feature(integer_atomics)]
 #![feature(int_roundings)]
 #![feature(slice_group_by)]
@@ -97,6 +96,7 @@
 #![feature(const_slice_from_ref)]
 #![feature(waker_getters)]
 #![feature(slice_flatten)]
+#![feature(provide_any)]
 #![deny(unsafe_op_in_unsafe_fn)]
 
 extern crate test;

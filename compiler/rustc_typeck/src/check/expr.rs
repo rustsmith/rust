@@ -561,13 +561,11 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                     // placeholder lifetimes with probing, we just replace higher lifetimes
                     // with fresh vars.
                     let span = args.get(i).map(|a| a.span).unwrap_or(expr.span);
-                    let input = self
-                        .replace_bound_vars_with_fresh_vars(
-                            span,
-                            infer::LateBoundRegionConversionTime::FnCall,
-                            fn_sig.input(i),
-                        )
-                        .0;
+                    let input = self.replace_bound_vars_with_fresh_vars(
+                        span,
+                        infer::LateBoundRegionConversionTime::FnCall,
+                        fn_sig.input(i),
+                    );
                     self.require_type_is_sized_deferred(
                         input,
                         span,
@@ -581,13 +579,11 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             // Also, as we just want to check sizedness, instead of introducing
             // placeholder lifetimes with probing, we just replace higher lifetimes
             // with fresh vars.
-            let output = self
-                .replace_bound_vars_with_fresh_vars(
-                    expr.span,
-                    infer::LateBoundRegionConversionTime::FnCall,
-                    fn_sig.output(),
-                )
-                .0;
+            let output = self.replace_bound_vars_with_fresh_vars(
+                expr.span,
+                infer::LateBoundRegionConversionTime::FnCall,
+                fn_sig.output(),
+            );
             self.require_type_is_sized_deferred(output, expr.span, traits::SizedReturnType);
         }
 
@@ -1035,7 +1031,10 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             } else {
                 (Applicability::MaybeIncorrect, false)
             };
-            if !lhs.is_syntactic_place_expr() && !matches!(lhs.kind, hir::ExprKind::Lit(_)) {
+            if !lhs.is_syntactic_place_expr()
+                && lhs.is_approximately_pattern()
+                && !matches!(lhs.kind, hir::ExprKind::Lit(_))
+            {
                 // Do not suggest `if let x = y` as `==` is way more likely to be the intention.
                 let hir = self.tcx.hir();
                 if let hir::Node::Expr(hir::Expr { kind: ExprKind::If { .. }, .. }) =

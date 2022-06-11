@@ -210,7 +210,7 @@ To learn more about a subcommand, run `./x.py <subcommand> -h`",
         let j_msg = format!(
             "number of jobs to run in parallel; \
              defaults to {} (this host's logical CPU count)",
-            std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get)
+            num_cpus::get()
         );
         opts.optopt("j", "jobs", &j_msg, "JOBS");
         opts.optflag("h", "help", "print this help message");
@@ -452,7 +452,7 @@ Arguments:
         ./x.py test library/std --test-args hash_map
         ./x.py test library/std --stage 0 --no-doc
         ./x.py test src/test/ui --bless
-        ./x.py test src/test/ui --compare-mode nll
+        ./x.py test src/test/ui --compare-mode chalk
 
     Note that `test src/test/* --stage N` does NOT depend on `build compiler/rustc --stage N`;
     just like `build library/std --stage N` it tests the compiler produced by the previous
